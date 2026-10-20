@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Access Rules Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: a three-part workbench. People on the left, their phone in the middle,
+     and the result with its reasons on the right. Collapses to one column on phones. */
+  :root {
+    --bg: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f5f7fa;
+    --ink: #0f1622;
+    --muted: #5a6474;
+    --line: #d6dce4;
+    --accent: #2a47e6;
+    --accent-soft: #e4e9ff;
+    --ok: #0f7a3d;
+    --ok-bg: #dcf3e5;
+    --warn: #8a5a00;
+    --warn-bg: #fff1cc;
+    --off: #6b7482;
+    --off-bg: #e9edf2;
+    --shadow: 0 1px 2px rgba(15, 22, 34, 0.06), 0 8px 24px rgba(15, 22, 34, 0.06);
+
+    /* The app inside the phone has its own fixed dark look, in both page themes. */
+    --app-bg: #0b0f17;
+    --app-card: #161c27;
+    --app-line: #252e3d;
+    --app-ink: #eef2f8;
+    --app-muted: #8a94a6;
+    --app-accent: #5b78ff;
+    --app-good: #3ddc97;
+    --phone-frame: #05070b;
+
+    --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+    --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1016; --surface: #141a22; --surface-2: #1a212b; --ink: #e9edf3; --muted: #97a1b0;
+      --line: #262f3b; --accent: #8096ff; --accent-soft: #1d2650; --ok: #5be39a; --ok-bg: #12301f;
+      --warn: #ffcf6b; --warn-bg: #3a2c0c; --off: #8d96a4; --off-bg: #1e252f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1016; --surface: #141a22; --surface-2: #1a212b; --ink: #e9edf3; --muted: #97a1b0;
+    --line: #262f3b; --accent: #8096ff; --accent-soft: #1d2650; --ok: #5be39a; --ok-bg: #12301f;
+    --warn: #ffcf6b; --warn-bg: #3a2c0c; --off: #8d96a4; --off-bg: #1e252f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding-block: 40px 64px;
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Header */
+  .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 16px 32px; margin-bottom: 32px; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(40px, 6vw, 60px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 46ch; color: var(--muted); }
+
+  /* Workbench grid */
+  .bench {
+    display: grid;
+    grid-template-columns: 290px 330px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .bench { grid-template-columns: 330px minmax(0, 1fr); }
+    .people { grid-column: 1 / -1; }
+    .people .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+    .bench { grid-template-columns: minmax(0, 1fr); }
+    .phone-col { justify-self: center; }
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+
+  /* Scenario list */
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .person {
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: grid;
+    gap: 3px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .person:hover { border-color: var(--muted); }
+  .person[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .person .name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .person .note { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .flag { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); }
+
+  /* Phone */
+  .phone-col { display: grid; gap: 12px; justify-items: center; position: sticky; top: max(24px, env(safe-area-inset-top, 0px)); }
+  @media (max-width: 760px) { .phone-col { position: static; } }
+  .phone {
+    width: 316px;
+    max-width: 100%;
+    height: 650px;
+    background: var(--phone-frame);
+    border-radius: 52px;
+    padding: 11px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 30px 60px -20px rgba(10, 16, 30, 0.45);
+  }
+  .screen {
+    position: relative;
+    height: 100%;
+    border-radius: 42px;
+    background: var(--app-bg);
+    color: var(--app-ink);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  .statusbar { flex: none; height: 46px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 13px; font-weight: 600; position: relative; }
+  .island { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: 96px; height: 28px; border-radius: 16px; background: #000; }
+  .statusbar svg { width: 24px; height: 12px; }
+  .toast {
+    margin: 0 14px 6px;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--app-good);
+    color: #062417;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 12px;
+    animation: drop 0.35s ease-out;
+  }
+  .toast svg { width: 16px; height: 16px; flex: none; }
+  @keyframes drop { from { transform: translateY(-8px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+  .content { flex: 1; overflow: auto; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+  .content::-webkit-scrollbar { display: none; }
+  .app-title { font-family: var(--display); font-weight: 700; font-size: 30px; text-transform: uppercase; line-height: 1; margin: 6px 0 4px; letter-spacing: 0.01em; }
+  .app-sub { color: var(--app-muted); font-size: 12px; margin: -2px 0 4px; }
+  .acard { background: var(--app-card); border: 1px solid var(--app-line); border-radius: 16px; padding: 12px 14px; display: grid; gap: 4px; }
+  .acard h3 { margin: 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .acard p { margin: 0; color: var(--app-muted); font-size: 12px; line-height: 1.45; }
+  .acard .lock { width: 13px; height: 13px; color: var(--app-muted); }
+  .sets { display: grid; gap: 6px; margin-top: 4px; }
+  .set { display: flex; justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .set span:last-child { color: var(--app-muted); }
+  .coach { border-color: rgba(91, 120, 255, 0.5); background: linear-gradient(180deg, rgba(91, 120, 255, 0.16), rgba(91, 120, 255, 0.04)); }
+  .coach .who { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--app-accent); }
+  .coach .said { color: var(--app-ink); }
+  .muted-card { opacity: 0.75; }
+
+  .device { display: flex; justify-content: space-between; align-items: center; }
+  .device .status { font-size: 12px; color: var(--app-muted); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--app-good); margin-right: 6px; }
+  .ring {
+    --pct: 42;
+    width: 168px; height: 168px; margin: 6px auto 2px;
+    border-radius: 50%;
+    background: conic-gradient(var(--app-accent) calc(var(--pct) * 1%), var(--app-line) 0);
+    display: grid; place-items: center;
+  }
+  .ring > div { width: 140px; height: 140px; border-radius: 50%; background: var(--app-bg); display: grid; place-items: center; align-content: center; }
+  .ring b { font-family: var(--display); font-size: 46px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ring small { color: var(--app-muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .params { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .param { background: var(--app-card); border: 1px solid var(--app-line); border-radius: 12px; padding: 8px 10px; }
+  .param small { display: block; color: var(--app-muted); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .param b { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+  .zones { display: flex; flex-wrap: wrap; gap: 6px; }
+  .zone { font-size: 11px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--app-line); color: var(--app-muted); }
+  .zone.on { border-color: var(--app-accent); color: var(--app-ink); }
+  .app-btn { display: block; width: 100%; text-align: center; border-radius: 12px; padding: 11px; font-weight: 700; font-size: 13px; background: var(--app-accent); color: #fff; }
+
+  .lockscreen { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 36px 10px 10px; color: var(--app-muted); }
+  .lockscreen .badge { width: 64px; height: 64px; border-radius: 20px; background: var(--app-card); border: 1px solid var(--app-line); display: grid; place-items: center; color: var(--app-ink); }
+  .lockscreen .badge svg { width: 26px; height: 26px; }
+  .lockscreen strong { color: var(--app-ink); font-size: 16px; }
+
+  .preview { position: relative; display: grid; gap: 10px; }
+  .preview .blur { display: grid; gap: 10px; filter: blur(4px); opacity: 0.5; pointer-events: none; }
+  .preview .over { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 6px; text-align: center; padding: 0 20px; }
+  .preview .over strong { font-size: 16px; display: flex; align-items: center; gap: 6px; }
+  .preview .over svg { width: 16px; height: 16px; }
+  .preview .over span { color: var(--app-muted); }
+
+  .offer { flex: none; margin: 0 12px 8px; padding: 10px 12px; border-radius: 16px; background: var(--app-card); border: 1px solid rgba(91, 120, 255, 0.55); display: flex; gap: 10px; align-items: center; }
+  .offer div { flex: 1; min-width: 0; }
+  .offer strong { display: block; font-size: 13px; }
+  .offer span { color: var(--app-muted); font-size: 11px; line-height: 1.35; display: block; }
+  .offer .cta { flex: none; background: var(--app-accent); color: #fff; border-radius: 999px; padding: 6px 11px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+  .tabbar { flex: none; display: flex; border-top: 1px solid var(--app-line); padding: 6px 6px 22px; }
+  .tabbar button { flex: 1; background: none; border: 0; color: var(--app-muted); cursor: pointer; padding: 6px 0 0; display: grid; justify-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; position: relative; }
+  .tabbar button svg.ico { width: 22px; height: 22px; }
+  .tabbar button.active { color: var(--app-ink); }
+  .tabbar button.active svg.ico { color: var(--app-accent); }
+  .tabbar .tlock { position: absolute; top: 2px; left: calc(50% + 7px); width: 13px; height: 13px; border-radius: 50%; background: var(--app-bg); display: grid; place-items: center; }
+  .tabbar .tlock svg { width: 10px; height: 10px; color: var(--app-muted); }
+
+  .phone-caption { font-size: 12px; color: var(--muted); text-align: center; max-width: 300px; margin: 0; }
+
+  /* Right column */
+  .side { display: grid; gap: 20px; min-width: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+  .panel-head { padding: 18px 20px 0; }
+  .panel-head.split { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .panel-body { padding: 16px 20px 20px; display: grid; gap: 18px; }
+
+  .verdict { font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; }
+  .verdict em { font-style: normal; color: var(--accent); }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; background: var(--surface-2); }
+  .tile.first { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .tile .tname { font-weight: 600; font-size: 14px; }
+  .tile .opens { font-size: 11px; font-weight: 600; color: var(--accent); }
+
+  .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.off { background: var(--off-bg); color: var(--off); }
+  .pill.hidden { background: transparent; color: var(--off); border: 1px dashed var(--off); }
+  .pill.plain { background: var(--off-bg); color: var(--ink); }
+  .pill.plain::before { display: none; }
+
+  .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 16px; margin: 0; font-size: 14px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; }
+  .facts .none { color: var(--muted); }
+
+  .why { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .why li { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 12px; font-size: 14px; line-height: 1.45; }
+  .why b { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+  .gap-note { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+  .gap-note b { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+
+  details summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  pre { margin: 10px 0 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12px/1.55 var(--mono); overflow-x: auto; }
+
+  /* Inputs */
+  .edited { font-size: 12px; font-weight: 600; color: var(--accent); }
+  .field { display: grid; gap: 8px; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 620px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
+  .seg { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; border: 0; background: transparent; border-radius: 7px; padding: 7px 6px; font-size: 13px; cursor: pointer; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 22, 34, 0.12); }
+  input[type="text"], select { width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 14px; }
+  .purchases { display: grid; gap: 8px; }
+  .purchase { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+  .purchase .email { grid-column: 1 / 3; font-family: var(--mono); font-size: 13px; }
+  .purchase .verdict-pill { grid-column: 3 / 5; justify-self: end; }
+  .purchase select, .purchase input { font-size: 13px; padding: 7px 8px; }
+  @media (max-width: 520px) {
+    .purchase { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+    .purchase .email { grid-column: 1 / -1; }
+    .purchase .verdict-pill { grid-column: 1 / -1; justify-self: start; }
+  }
+  .icon-btn { border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+  .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .add { justify-self: start; background: transparent; border: 1px dashed var(--line); border-radius: 9px; padding: 7px 12px; font-size: 13px; cursor: pointer; color: var(--ink); }
+  .add:hover { border-color: var(--muted); }
+  .empty { margin: 0; font-size: 13px; color: var(--muted); }
+  .switches { display: grid; gap: 10px; }
+  .switch { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
+  .switch input { appearance: none; width: 36px; height: 22px; border-radius: 999px; background: var(--off-bg); border: 1px solid var(--line); position: relative; cursor: pointer; flex: none; margin: 0; transition: background 0.15s; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.15s; }
+  .switch input:checked { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked::after { transform: translateX(14px); }
+
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">APE BORN · App access</p>
+      <h1>Who sees what</h1>
+    </div>
+    <p class="lede">Pick a person to see their app. The panel on the right shows what they get and which rule decided it. Change any input to try your own case.</p>
+  </header>
+
+  <main class="bench">
+    <section class="people" aria-labelledby="people-title">
+      <h2 class="section-title" id="people-title">People</h2>
+      <div class="list" id="scenarios"></div>
+    </section>
+
+    <section class="phone-col" aria-label="Their app">
+      <div class="phone"><div class="screen" id="screen"></div></div>
+      <p class="phone-caption" id="caption">Tap the tabs to look around.</p>
+    </section>
+
+    <div class="side">
+      <section class="panel" aria-labelledby="result-title">
+        <div class="panel-head">
+          <h2 class="section-title" id="result-title">What they get</h2>
+          <p class="verdict" id="verdict"></p>
+        </div>
+        <div class="panel-body">
+          <div class="tiles" id="tiles"></div>
+          <dl class="facts" id="facts"></dl>
+          <div id="gap"></div>
+          <div class="field">
+            <span class="label">Why</span>
+            <ul class="why" id="why"></ul>
+          </div>
+          <details>
+            <summary>Show the raw output</summary>
+            <pre id="json"></pre>
+          </details>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="inputs-title">
+        <div class="panel-head split">
+          <h2 class="section-title" id="inputs-title">About this person</h2>
+          <span class="edited" id="edited"></span>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <span class="label" id="path-label">Picked on the first screen</span>
+            <div class="seg" id="path" role="group" aria-labelledby="path-label"></div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label class="label" for="email">Email they typed</label>
+              <input type="text" id="email" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field">
+              <span class="label" id="platform-label">Using</span>
+              <div class="seg" id="platform" role="group" aria-labelledby="platform-label"></div>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Purchases on file</span>
+            <div class="purchases" id="purchases"></div>
+            <button type="button" class="add" id="add">Add a purchase</button>
+          </div>
+          <div class="field">
+            <span class="label">Their Ultra</span>
+            <div class="switches">
+              <label class="switch"><input type="checkbox" id="paired"> Paired with this phone</label>
+              <label class="switch"><input type="checkbox" id="first"> Finished their first session</label>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>Demo only. The solution is the Swift code in <code>Sources/AppAccess</code>. This page runs a JavaScript copy of the same rules (<code>demo/getAppState.js</code>), checked against the Swift on every combination of inputs.</footer>
+</div>
+
+<script src="getAppState.js"></script>
+<script>
+const SCENARIOS = [
+  {
+    name: "The brief's example",
+    note: "Picked \"I'm new\" but has an Ultra order, with messy capitals.",
+    input: { chosenPath: "new", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "ios",
+      purchases: [{ source: "shopify", product: "ultra", email: " Sam@Example.com", status: "active" }] },
+  },
+  {
+    name: "Ultra owner on the web",
+    flag: "Uncovered case",
+    note: "Remote is hidden on the web, so where do they land?",
+    input: { chosenPath: "ultra", email: "sam@example.com", pairedDevice: true, firstSessionDone: false, platform: "web",
+      purchases: [{ source: "web", product: "ultra", email: "sam@example.com", status: "active" }] },
+  },
+  {
+    name: "Ultra owner, first session done",
+    note: "Has trained with the device once, so the Elite trial appears.",
+    input: { chosenPath: "ultra", email: "sam@example.com", pairedDevice: true, firstSessionDone: true, platform: "ios",
+      purchases: [{ source: "shopify", product: "ultra", email: "sam@example.com", status: "active" }] },
+  },
+  {
+    name: "Elite member",
+    note: "Gets Elite and the full Train tab. Nothing to sell them.",
+    input: { chosenPath: "elite", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "android",
+      purchases: [{ source: "google_play", product: "elite", email: "sam@example.com", status: "active" }] },
+  },
+  {
+    name: "Says Elite, no subscription",
+    note: "Picking the Elite path doesn't unlock anything by itself.",
+    input: { chosenPath: "elite", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "ios",
+      purchases: [] },
+  },
+  {
+    name: "Lapsed and refunded",
+    note: "Expired Elite and a refunded Ultra. Neither counts.",
+    input: { chosenPath: "elite", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "ios",
+      purchases: [
+        { source: "app_store", product: "elite", email: "sam@example.com", status: "expired" },
+        { source: "shopify", product: "ultra", email: "sam@example.com", status: "refunded" },
+      ] },
+  },
+  {
+    name: "Someone else's purchase",
+    note: "An Elite subscription under a different email.",
+    input: { chosenPath: "new", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "ios",
+      purchases: [{ source: "web", product: "elite", email: "alex@example.com", status: "active" }] },
+  },
+  {
+    name: "Arnold Pro subscriber",
+    note: "Full Train tab. The next offer in line is the Ultra.",
+    input: { chosenPath: "new", email: "sam@example.com", pairedDevice: false, firstSessionDone: false, platform: "ios",
+      purchases: [{ source: "app_store", product: "arnold_pro", email: "sam@example.com", status: "active" }] },
+  },
+  {
+    name: "Paired Ultra, no order",
+    note: "A gift, or bought under another email. Pairing unlocks Remote.",
+    input: { chosenPath: "new", email: "sam@example.com", pairedDevice: true, firstSessionDone: false, platform: "ios",
+      purchases: [] },
+  },
+];
+
+const PATHS = [["ultra", "I have an Ultra"], ["elite", "I'm an Elite member"], ["new", "I'm new"]];
+const PLATFORMS = [["ios", "iOS"], ["android", "Android"], ["web", "Web"]];
+const PRODUCTS = [["ultra", "Ultra"], ["elite", "Elite"], ["arnold_pro", "Arnold Pro"]];
+const SOURCES = [["shopify", "Shopify"], ["app_store", "App Store"], ["google_play", "Google Play"], ["web", "Website"]];
+const STATUSES = [["active", "Active"], ["expired", "Expired"], ["refunded", "Refunded"]];
+const PRODUCT_NAME = { ultra: "Ultra", elite: "Elite", arnold_pro: "Arnold Pro" };
+const TAB_NAME = { train: "Train", remote: "Remote", elite: "Elite", me: "Me" };
+const PATH_NAME = { ultra: "Ultra", elite: "Elite", new: "New" };
+const PATH_IN_SENTENCE = { ultra: "Ultra", elite: "Elite", new: "new" };
+const OFFER_NAME = { elite_trial: "Elite free trial", arnold_pro: "Arnold Pro", ultra: "Ultra", elite: "Elite" };
+const OFFERS = {
+  elite_trial: ["Try Elite free", "Live calls, video lessons and the community.", "Start trial"],
+  arnold_pro: ["Meet Arnold", "Your AI coach adjusts every workout.", "Get Pro"],
+  ultra: ["Train with the Ultra", "Full-body EMS, run from this app.", "Shop"],
+  elite: ["Join Elite", "Community, lessons and live calls.", "Join"],
+};
+
+const SVG = {
+  train: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  remote: '<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/>',
+  elite: '<path d="M3.5 8.5 7.5 12l4.5-6.5L16.5 12l4-3.5-1.8 10H5.3z"/>',
+  me: '<circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5c1.3-3.6 4.1-5.5 7.5-5.5s6.2 1.9 7.5 5.5"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+};
+
+function icon(name, cls = "") {
+  const holder = document.createElement("span");
+  holder.innerHTML = `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVG[name]}</svg>`;
+  return holder.firstChild;
+}
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c !== null && c !== undefined && c !== false) node.append(c);
+  return node;
+}
+
+const $ = (id) => document.getElementById(id);
+
+let input;
+let state;
+let activeTab;
+let scenarioIndex = 0;
+
+// Display helper: does this purchase count, and if not, why not?
+function purchaseVerdict(p) {
+  if (p.status !== "active") return { counts: false, text: `Ignored: ${p.status}` };
+  if (cleanEmail(input.email) === "") return { counts: false, text: "Ignored: no email entered" };
+  if (cleanEmail(p.email) !== cleanEmail(input.email)) return { counts: false, text: "Ignored: different email" };
+  return { counts: true, text: "Counts" };
+}
+
+function owns(product) {
+  return input.purchases.some((p) => p.product === product && purchaseVerdict(p).counts);
+}
+
+/* ---------- Scenarios ---------- */
+
+function renderScenarios() {
+  $("scenarios").replaceChildren(...SCENARIOS.map((sc, i) =>
+    el("button", { type: "button", class: "person", "aria-pressed": String(i === scenarioIndex), onclick: () => loadScenario(i) },
+      el("span", { class: "name" }, sc.name, sc.flag ? el("span", { class: "flag" }, sc.flag) : null),
+      el("span", { class: "note" }, sc.note))));
+}
+
+function loadScenario(i) {
+  scenarioIndex = i;
+  input = structuredClone(SCENARIOS[i].input);
+  renderScenarios();
+  renderInputs();
+  update();
+}
+
+function edited() {
+  if (scenarioIndex !== -1) {
+    scenarioIndex = -1;
+    renderScenarios();
+  }
+  update();
+}
+
+/* ---------- Inputs ---------- */
+
+function segmented(container, list, value, onPick) {
+  container.replaceChildren(...list.map(([v, label]) =>
+    el("button", { type: "button", "aria-pressed": String(v === value), onclick: () => onPick(v) }, label)));
+}
+
+function select(list, value, label, onChange) {
+  const box = el("select", { "aria-label": label });
+  box.replaceChildren(...list.map(([v, text]) => el("option", { value: v }, text)));
+  box.value = value;
+  box.addEventListener("change", () => onChange(box.value));
+  return box;
+}
+
+function renderInputs() {
+  segmented($("path"), PATHS, input.chosenPath, (v) => { input.chosenPath = v; renderInputs(); edited(); });
+  segmented($("platform"), PLATFORMS, input.platform, (v) => { input.platform = v; renderInputs(); edited(); });
+  $("email").value = input.email;
+  $("paired").checked = input.pairedDevice;
+  $("first").checked = input.firstSessionDone;
+  renderPurchases();
+}
+
+function verdictPill(p) {
+  const v = purchaseVerdict(p);
+  return el("span", { class: `pill verdict-pill ${v.counts ? "ok" : "off"}` }, v.text);
+}
+
+function renderPurchases() {
+  const box = $("purchases");
+  if (input.purchases.length === 0) {
+    box.replaceChildren(el("p", { class: "empty" }, "No purchases on file for this person."));
+    return;
+  }
+  box.replaceChildren(...input.purchases.map((p, i) => {
+    const row = el("div", { class: "purchase" });
+    const refreshPill = () => row.querySelector(".verdict-pill").replaceWith(verdictPill(p));
+    const email = el("input", { type: "text", class: "email", "aria-label": "Email on this purchase", spellcheck: "false", autocomplete: "off" });
+    email.value = p.email;
+    email.addEventListener("input", () => { p.email = email.value; refreshPill(); edited(); });
+    row.append(
+      select(PRODUCTS, p.product, "Product", (v) => { p.product = v; edited(); }),
+      select(STATUSES, p.status, "Status", (v) => { p.status = v; refreshPill(); edited(); }),
+      select(SOURCES, p.source, "Bought from", (v) => { p.source = v; edited(); }),
+      el("button", { type: "button", class: "icon-btn", "aria-label": "Remove this purchase",
+        onclick: () => { input.purchases.splice(i, 1); renderPurchases(); edited(); } }, icon("close")),
+      email,
+      verdictPill(p),
+    );
+    return row;
+  }));
+}
+
+function refreshAllPills() {
+  document.querySelectorAll(".purchase").forEach((row, i) => {
+    row.querySelector(".verdict-pill").replaceWith(verdictPill(input.purchases[i]));
+  });
+}
+
+/* ---------- Update ---------- */
+
+function update() {
+  state = getAppState(input);
+  activeTab = state.firstTab;
+  $("edited").textContent = scenarioIndex === -1 ? "Your own case" : "";
+  renderPhone();
+  renderResult();
+}
+
+/* ---------- Phone ---------- */
+
+function batteryIcon() {
+  const holder = document.createElement("span");
+  holder.innerHTML = '<svg viewBox="0 0 26 12" aria-hidden="true"><rect x="0.5" y="0.5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor"/><rect x="23.5" y="4" width="1.8" height="4" rx="0.9" fill="currentColor" opacity="0.5"/></svg>';
+  return holder.firstChild;
+}
+
+function renderPhone() {
+  const parts = [
+    el("div", { class: "statusbar" }, el("span", {}, "9:41"), el("span", { class: "island" }), batteryIcon()),
+  ];
+  if (state.message) parts.push(el("div", { class: "toast", role: "status" }, icon("check"), state.message));
+  parts.push(el("div", { class: "content" }, ...screenFor(activeTab)));
+  if (state.upgrade) {
+    const [title, text, cta] = OFFERS[state.upgrade];
+    parts.push(el("div", { class: "offer" }, el("div", {}, el("strong", {}, title), el("span", {}, text)), el("span", { class: "cta" }, cta)));
+  }
+
+  const tabs = [
+    ["train", false],
+    ["remote", state.tabs.remote === "locked"],
+    ["elite", state.tabs.elite === "preview"],
+    ["me", false],
+  ].filter(([id]) => !(id === "remote" && state.tabs.remote === "hidden"));
+
+  parts.push(el("nav", { class: "tabbar", "aria-label": "App tabs" }, ...tabs.map(([id, locked]) =>
+    el("button", { type: "button", class: id === activeTab ? "active" : "", "aria-current": id === activeTab ? "page" : null,
+      onclick: () => { activeTab = id; renderPhone(); } },
+      icon(id, "ico"),
+      locked ? el("span", { class: "tlock" }, icon("lock")) : null,
+      TAB_NAME[id]))));
+
+  $("screen").replaceChildren(...parts);
+  $("caption").textContent = state.tabs.remote === "hidden"
+    ? "On the web, so there's no Remote tab. Tap the tabs to look around."
+    : "Tap the tabs to look around.";
+}
+
+function acard(title, text, opts = {}) {
+  return el("div", { class: `acard ${opts.cls || ""}` },
+    el("h3", {}, opts.locked ? icon("lock", "lock") : null, title),
+    text ? el("p", {}, text) : null,
+    ...(opts.extra || []));
+}
+
+function screenFor(tab) {
+  if (tab === "train") {
+    const full = state.tabs.train === "full";
+    const workout = acard("Upper body strength", "35 min · 5 exercises", { extra: [el("div", { class: "sets" },
+      ...[["Push-ups", "3 × 12"], ["Bent-over row", "3 × 10"], ["Shoulder press", "3 × 10"]].map(([a, b]) =>
+        el("div", { class: "set" }, el("span", {}, a), el("span", {}, b))))] });
+    return [
+      el("h2", { class: "app-title" }, "Train"),
+      el("p", { class: "app-sub" }, full ? "Your plan, adjusted by Arnold" : "Basic plan"),
+      full
+        ? el("div", { class: "acard coach" }, el("span", { class: "who" }, "Arnold"),
+            el("p", { class: "said" }, "You hit every rep on Monday. I've added a fourth set of push-ups today."))
+        : null,
+      workout,
+      acard("This week", "3 of 4 sessions logged"),
+      full ? null : acard("Arnold AI coach", "Plans that adapt after every session. Part of Arnold Pro and Elite.", { locked: true, cls: "muted-card" }),
+    ];
+  }
+
+  if (tab === "remote") {
+    if (state.tabs.remote === "locked") {
+      return [
+        el("h2", { class: "app-title" }, "Remote"),
+        el("div", { class: "lockscreen" },
+          el("div", { class: "badge" }, icon("remote")),
+          el("strong", {}, "For Ultra owners"),
+          el("span", {}, "Control your Ultra suit's intensity and muscle zones from here.")),
+      ];
+    }
+    if (!input.pairedDevice) {
+      return [
+        el("h2", { class: "app-title" }, "Remote"),
+        el("div", { class: "lockscreen" },
+          el("div", { class: "badge" }, icon("remote")),
+          el("strong", {}, "Let's pair your Ultra"),
+          el("span", {}, "Turn on the suit and hold it near your phone.")),
+        el("span", { class: "app-btn" }, "Pair Ultra"),
+      ];
+    }
+    return [
+      el("div", { class: "device" },
+        el("h2", { class: "app-title" }, "Remote"),
+        el("span", { class: "status" }, el("span", { class: "dot" }), "Ultra · 86%")),
+      el("div", { class: "ring" }, el("div", {}, el("b", {}, "42"), el("small", {}, "Intensity %"))),
+      el("div", { class: "params" },
+        el("div", { class: "param" }, el("small", {}, "Frequency"), el("b", {}, "85 Hz")),
+        el("div", { class: "param" }, el("small", {}, "Pulse width"), el("b", {}, "350 µs"))),
+      el("div", { class: "zones" }, ...["Chest", "Back", "Arms", "Abs", "Glutes", "Legs"].map((z, i) =>
+        el("span", { class: `zone ${i < 4 ? "on" : ""}` }, z))),
+      el("span", { class: "app-btn" }, "Start 20 min session"),
+    ];
+  }
+
+  if (tab === "elite") {
+    const items = [
+      acard("Live call · Thu 19:00", "Recovery and sleep, with the coaching team", { cls: "coach" }),
+      acard("Discussion board", "12 new posts since yesterday"),
+      acard("Video lessons", "New: getting the most from EMS sessions"),
+    ];
+    if (state.tabs.elite === "unlocked") {
+      return [el("h2", { class: "app-title" }, "Elite"), el("p", { class: "app-sub" }, "Welcome back"), ...items];
+    }
+    return [
+      el("h2", { class: "app-title" }, "Elite"),
+      el("div", { class: "preview" },
+        el("div", { class: "blur" }, ...items),
+        el("div", { class: "over" },
+          el("strong", {}, icon("lock"), "Elite preview"),
+          el("span", {}, "Members get live calls, lessons and the community."))),
+    ];
+  }
+
+  return [
+    el("h2", { class: "app-title" }, "Me"),
+    acard("Profile", input.email.trim() || "No email"),
+    acard("Progress", "14 sessions · 6 week streak"),
+    acard("Settings", "Notifications, units, devices"),
+  ];
+}
+
+/* ---------- Result panel ---------- */
+
+function statePill(tab, value) {
+  const map = {
+    train: { full: ["ok", "Full"], basic: ["plain", "Basic"] },
+    remote: { unlocked: ["ok", "Unlocked"], locked: ["off", "Locked"], hidden: ["hidden", "Hidden"] },
+    elite: { unlocked: ["ok", "Unlocked"], preview: ["warn", "Preview"] },
+    me: { unlocked: ["ok", "Unlocked"] },
+  };
+  const [cls, text] = map[tab][value];
+  return el("span", { class: `pill ${cls}` }, text);
+}
+
+function renderResult() {
+  const offerText = state.upgrade ? `offered ${OFFER_NAME[state.upgrade]}` : "shown no offer";
+  $("verdict").replaceChildren(
+    "Opens on ", el("em", {}, TAB_NAME[state.firstTab]), `, on the ${PATH_IN_SENTENCE[state.path]} path, ${offerText}.`);
+
+  $("tiles").replaceChildren(...["train", "remote", "elite", "me"].map((t) =>
+    el("div", { class: `tile ${t === state.firstTab ? "first" : ""}` },
+      el("span", { class: "tname" }, TAB_NAME[t]),
+      statePill(t, state.tabs[t]),
+      t === state.firstTab ? el("span", { class: "opens" }, "Opens first") : null)));
+
+  $("facts").replaceChildren(
+    el("dt", {}, "Path"), el("dd", {}, PATH_NAME[state.path]),
+    el("dt", {}, "Offer"), el("dd", {}, state.upgrade ? OFFER_NAME[state.upgrade] : el("span", { class: "none" }, "None")),
+    el("dt", {}, "Message"), el("dd", {}, state.message ? `"${state.message}"` : el("span", { class: "none" }, "None")),
+  );
+
+  const isGap = state.path === "ultra" && input.platform === "web";
+  $("gap").replaceChildren(...(isGap ? [el("div", { class: "gap-note" },
+    el("b", {}, "Uncovered case"),
+    "The rules open the Ultra path on Remote, but Remote is hidden on the web. My call: open on Train, which everyone has.")] : []));
+
+  $("why").replaceChildren(...explain().map(([k, v]) => el("li", {}, el("b", {}, k), el("span", {}, v))));
+  $("json").textContent = JSON.stringify(state, null, 2);
+}
+
+// Plain-English reasons for the result, for the "Why" list.
+function explain() {
+  const ownsUltra = owns("ultra");
+  const ownsElite = owns("elite");
+  const ownsArnold = owns("arnold_pro");
+  const hasUltra = ownsUltra || input.pairedDevice;
+  const lines = [];
+
+  const owned = ["ultra", "elite", "arnold_pro"].filter(owns).map((p) => PRODUCT_NAME[p]);
+  let ownsLine = owned.length ? `Active under this email: ${owned.join(", ")}.` : "Nothing active under this email.";
+  if (input.pairedDevice && !ownsUltra) ownsLine += " Their paired Ultra counts as owning one.";
+  lines.push(["Owns", ownsLine]);
+
+  if (input.chosenPath === "new" && state.path === "ultra") {
+    lines.push(["Path", "Picked \"I'm new\", but we found an active Ultra order, so they move to the Ultra path."]);
+  } else if (input.chosenPath === "elite" && !ownsElite) {
+    lines.push(["Path", "Kept the Elite path they picked. Picking it doesn't unlock Elite, so they see the preview."]);
+  } else {
+    lines.push(["Path", "Kept the path they picked."]);
+  }
+
+  if (state.path === "ultra" && state.firstTab === "train") {
+    lines.push(["First tab", "The Ultra path would open Remote, but it's hidden on the web, so they start on Train."]);
+  } else {
+    lines.push(["First tab", `The ${PATH_IN_SENTENCE[state.path]} path opens ${TAB_NAME[state.firstTab]}.`]);
+  }
+
+  if (ownsElite) lines.push(["Offer", "Elite members are never shown an offer."]);
+  else if (hasUltra && input.firstSessionDone) lines.push(["Offer", "Ultra owner who's done their first session, so they get the Elite trial."]);
+  else if (hasUltra) lines.push(["Offer", "Ultra owner. The Elite trial waits until after their first session."]);
+  else if (!ownsArnold) lines.push(["Offer", "Doesn't have Arnold Pro, which is first in the offer order."]);
+  else lines.push(["Offer", "Has Arnold Pro, so the next in the order is the Ultra."]);
+
+  return lines;
+}
+
+/* ---------- Wiring ---------- */
+
+$("email").addEventListener("input", (e) => { input.email = e.target.value; refreshAllPills(); edited(); });
+$("paired").addEventListener("change", (e) => { input.pairedDevice = e.target.checked; edited(); });
+$("first").addEventListener("change", (e) => { input.firstSessionDone = e.target.checked; edited(); });
+$("add").addEventListener("click", () => {
+  input.purchases.push({ source: "shopify", product: "elite", email: input.email, status: "active" });
+  renderPurchases();
+  edited();
+});
+
+loadScenario(0);
+</script>
+</body>
+</html>
